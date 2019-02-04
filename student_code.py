@@ -59,6 +59,7 @@ class KnowledgeBase(object):
             if fact_rule not in self.facts:
                 self.facts.append(fact_rule)
                 for rule in self.rules:
+                    #print("\ntest")
                     self.ie.fc_infer(fact_rule, rule, self)
             else:
                 if fact_rule.supported_by:
@@ -72,6 +73,7 @@ class KnowledgeBase(object):
             if fact_rule not in self.rules:
                 self.rules.append(fact_rule)
                 for fact in self.facts:
+                    #print("\ntest1")
                     self.ie.fc_infer(fact, fact_rule, self)
             else:
                 if fact_rule.supported_by:
@@ -128,7 +130,50 @@ class KnowledgeBase(object):
         printv("Retracting {!r}", 0, verbose, [fact_or_rule])
         ####################################################
         # Student code goes here
-        
+        #if isinstance(fact_or_rule, Rule):
+        #    print("Shitttttttttttttttttttt")
+        #    return
+
+        if fact_or_rule in self.facts:
+            #if fact_or_rule.asserted:
+            indexOfF = self.facts.index(fact_or_rule)
+            #is supported by others
+            if self.facts[indexOfF].supported_by:
+                fact_or_rule.asserted = False
+                return
+            #is not supported
+            else:
+                for i in self.facts[indexOfF].supports_facts:
+                    for j in i.supported_by:
+                        if self.facts[indexOfF] in j:
+                            i.supported_by.remove(j)
+                    self.kb_delFact(i)
+                for i in self.facts[indexOfF].supports_rules:
+                    for j in i.supported_by:
+                        if self.facts[indexOfF] in j:
+                            i.supported_by.remove(j)
+                    self.kb_delRule(i)
+                self.facts.remove(fact_or_rule)
+
+    def kb_delFact(self, fact):
+        #if not fact.supported_by:
+        if len(fact.supported_by) == 0:
+            self.facts.remove(fact)
+            for i in fact.supports_facts:
+                for j in i.supported_by:
+                    if fact in j:
+                        i.supported_by.remove(j)
+                self.kb_delFact(i)
+
+
+    def kb_delRule(self, rule):
+        if not rule.supported_by:
+            self.rules.remove(rule)
+            for i in rule.supports_facts:
+                for j in i.supported_by:
+                    if rule in j:
+                        i.supported_by.remove(j)
+                self.kb_delRule(i)
 
 class InferenceEngine(object):
     def fc_infer(self, fact, rule, kb):
@@ -146,3 +191,72 @@ class InferenceEngine(object):
             [fact.statement, rule.lhs, rule.rhs])
         ####################################################
         # Student code goes here
+        #Use the util.match function to do unification and create possible bindings
+        #Use the util.instantiate function to bind a variable in the rest of a rule
+        #Rules and Facts have fields for supported_by, supports_facts, and supports_rules. Use them to track inferences! For example, imagine that a fact F and rule R matched to infer a new fact/rule fr.
+        #fr is supported by F and R. Add them to fr's supported_by list - you can do this by passing them as a constructor argument when creating fr.
+        #F and R now support fr. Add fr to the supports_rules and supports_facts lists (as appropriate) in F and R.
+
+        if not rule.lhs:
+            print("not rule.lhs")
+            #return
+
+        bind = match(fact.statement, rule.lhs[0])
+        if bind:
+            inferS = instantiate(rule.rhs, bind)
+            indexOfF = kb.facts.index(fact)
+            indexOfR = kb.rules.index(rule)
+            lenOfFacts = len(kb.facts)
+            lenOfRules = len(kb.rules)
+
+            """if fact in kb.facts:
+                print("find F")
+                print(fact == kb.facts[0])
+            else:
+                print("didn't find F")
+            """
+            """
+            print("indexOfF")
+            print(indexOfF)
+            print("lenOfFacts")
+            print(lenOfFacts)
+            print("indexOfR")
+            print(indexOfR)
+            print("lenOfRules")
+            print(lenOfRules)
+            """
+            #if indexOfF == lenOfFacts - 1:
+            if len(rule.lhs) == 1:
+                #print("new fact not in kb")
+                inferF = Fact(inferS, [[fact, rule]])
+                #inferF = Fact(inferS)
+                #fact.supports_facts.append(inferF)
+                #rule.supports_facts.append(inferF)
+                if inferF in kb.facts:
+                    print("WTF???????????????????????????????????????????????????????")
+                if inferF not in kb.facts:
+                    #inferF.supported_by.append([fact, rule])
+                    fact.supports_facts.append(inferF)
+                    rule.supports_facts.append(inferF)
+                    kb.kb_assert(inferF)
+            #elif indexOfR == lenOfRules - 1:
+            else:
+                #print("new rule not in kb")
+                tmp = []
+                for i in rule.lhs[1:]:
+                    tmp.append(instantiate(i, bind))
+                inferR = Rule([tmp, inferS], [[fact, rule]])
+                #inferR = Rule([tmp, inferS])
+
+                #fact.supports_rules.append(inferR)
+                #rule.supports_rules.append(inferR)
+                if inferR in kb.rules:
+                    print("OKwtf???????????????????????????????????????????????????????????")
+                if inferR not in kb.rules:
+                    #inferR.supported_by.append([fact, rule])
+                    fact.supports_rules.append(inferR)
+                    rule.supports_rules.append(inferR)
+                    kb.kb_add(inferR)
+        #print("term : ")
+        #print(term)
+        #print("\n")
